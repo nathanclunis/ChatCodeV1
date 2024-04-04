@@ -1,0 +1,110 @@
+?start: program
+?program: (statement | contract_declaration)*
+
+?statement: assignment
+          | if_statement
+          | loop
+          | display
+          | return_statement
+          | event_emit
+          | function_call ";"
+          | http_request
+          | deploy_statement
+
+assignment: "var"? identifier EQUAL expression ";"
+if_statement: "if" "(" condition ")" "then" block ("else" block)? "end"
+
+loop: for_loop
+    | while_loop
+
+for_loop: "for" "(" assignment condition ";" assignment ")" "do" block "end"
+while_loop: "while" "(" condition ")" "do" block "end"
+block: "{" statement* "}"
+display: "print" "(" expression ")" ";"
+condition: expression comparator expression
+
+?expression: term (operator term)*
+           | function_call
+           | STRING
+           | INT
+           | "true" -> true
+           | "false" -> false
+           | identifier
+
+address: /"0x[a-fA-F0-9]{40}"/ | /"[a-fA-F0-9]{64}"/
+term: factor (operator factor)*
+operator: ADD | SUBTRACT | MULTIPLY | DIVIDE| EQUAL
+ADD: "+"
+SUBTRACT: "-"
+MULTIPLY: "*"
+DIVIDE: "/"
+EQUAL: "="
+NUMBER: /-?\d+/
+
+factor: number
+      | function_call
+      | "(" expression ")"
+      | identifier
+
+return_statement: "return" expression ";"
+
+comparator: LESSTHAN | GREATERTHAN | LESSTHANOREQUAL | GREATERTHANOREQUAL | NOTEQUAL | EQUIVALENT
+LESSTHAN: "<"
+GREATERTHAN: ">"
+LESSTHANOREQUAL: "<="
+GREATERTHANOREQUAL: ">="
+NOTEQUAL: "!="
+EQUIVALENT: "=="
+number: NUMBER
+STRING: /"([^"\\]*(\\.[^"\\]*)*)"/
+LETTER: "A".."Z" | "a".."z"
+character: LETTER | DIGIT | "!" | "$"| "?"
+
+contract_declaration: "contract" identifier "{" contract_body* "}"
+
+contract_body: statement
+              | contract_statement
+
+contract_statement: state_declaration
+                  | function_declaration
+                  | event_declaration
+                  | event_emit
+                  | initialize_function
+
+state_declaration: "var" identifier type_specifier (EQUAL expression)? ";"
+function_declaration: visibility "function" identifier "(" (type_specifier identifier ("," type_specifier identifier)*)? ")" ("returns" "(" type_specifier ")")? "{" function_body* "}"
+initialize_function: "public" "function" "initialize" "(" (type_specifier identifier ("," type_specifier identifier)*)? ")" "{" function_body* "}"
+function_call: qualified_identifier "(" (expression ("," expression)*)? ")"
+qualified_identifier: identifier ("." identifier)*
+
+function_body: statement
+             | event_emit
+
+deploy_statement: "deploy" function_call ";"
+visibility: PUBLIC | PRIVATE
+PUBLIC: "public"
+PRIVATE: "private"
+event_declaration: "event" identifier "(" (type_specifier identifier ("," type_specifier identifier)*) ")" ";"
+event_emit: "emit" identifier "(" expression ("," expression)* ")" ";"
+type_specifier: INT_TYPE | STRING_TYPE | BOOL_TYPE | ADDRESS_TYPE
+INT_TYPE: "int"
+STRING_TYPE: "string"
+BOOL_TYPE: "bool"
+ADDRESS_TYPE: "address"
+identifier: /(?!(print))[a-zA-Z_][a-zA-Z0-9_]*/
+
+http_request: "http_call" identifier"."method "(" URL headers? body? ")"
+method: "GET" | "POST" | "PUT" | "DELETE"
+URL: STRING
+headers: "{" header_pair ("," header_pair)* "}"
+header_pair: STRING "->" STRING
+body: "BODY" "->" STRING
+
+
+
+COMMENT: /\/\/[^\n]*|#[^\n]*/|/\/\*[\s\S]*?\*\//
+%ignore COMMENT
+%import common.INT
+%import common.DIGIT
+%import common.WS
+%ignore WS
